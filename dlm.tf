@@ -1,5 +1,5 @@
-resource "aws_iam_role" "dlm_lifecycle_role" {
-  name = "dlm-lifecycle-role"
+resource "aws_iam_role" "default" {
+  name = "${var.basename}-dlm_role"
 
   assume_role_policy = <<EOF
 {
@@ -19,9 +19,9 @@ EOF
 
 }
 
-resource "aws_iam_role_policy" "dlm_lifecycle" {
-  name = "dlm-lifecycle-policy"
-  role = aws_iam_role.dlm_lifecycle_role.id
+resource "aws_iam_role_policy" "default" {
+  name = "${var.basename}-dlm_role_policy"
+  role = aws_iam_role.default.id
 
   policy = <<EOF
 {
@@ -52,25 +52,25 @@ EOF
 
 }
 
-resource "aws_dlm_lifecycle_policy" "recovery" {
-  description        = "Lifecycle policy for fast recovery"
-  execution_role_arn = aws_iam_role.dlm_lifecycle_role.arn
+resource "aws_dlm_lifecycle_policy" "default" {
+  description        = var.description
+  execution_role_arn = aws_iam_role.default.arn
   state              = "ENABLED"
 
   policy_details {
     resource_types = ["VOLUME"]
 
     schedule {
-      name = "1 week of daily snapshots"
+      name = var.schedule_name
 
       create_rule {
-        interval      = 24
-        interval_unit = "HOURS"
-        times         = ["02:00"]
+        interval      = var.create_interval
+        interval_unit = var.interval_unit
+        times         = var.times
       }
 
       retain_rule {
-        count = 7
+        count = var.retain_count
       }
 
       tags_to_add = {
@@ -82,8 +82,7 @@ resource "aws_dlm_lifecycle_policy" "recovery" {
     }
 
     target_tags = {
-      "dlm-lifecycle-policy": "recovery",
-      "Role": "dlm"
+      "dlm-lifecycle-policy": var.target_tag_value
     }
   }
 }
